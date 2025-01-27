@@ -1,0 +1,99 @@
+---
+title: "Project 2"
+author: "Hunter Brooks"
+date: "2024-12-13"
+output: pdf_document
+---
+
+```{r}  
+install.packages("rvest")
+library(tidygeocoder)
+library (readxl)
+library(dplyr)
+library(stringr)
+library(openxlsx)
+library(rvest)
+library(purrr)
+
+setwd("/Users/hunterbrooks/Desktop/Work/Second Project/")
+getwd()
+```
+
+```{r}
+html<-read_html("https://raleighnc.gov/parks-directory/all")
+html |> html_elements("div.address") |> html_text2()
+
+Raw<-tibble(Name=html|>html_elements("div.address") |> html_text2())
+Raw$Address<-NA
+
+PrepRaw<-Raw
+PrepRaw$Address <- sub(".*?(\\d.*)", "\\1", PrepRaw$Name)   
+PrepRaw$Name <- sub("\\s\\d.*", "", PrepRaw$Name)  
+
+PrepRaw<-geocode(PrepRaw, 
+                   street=Address, 
+                   method="osm",
+                   full_results = TRUE)
+
+StoredGeo<-PrepRaw%>%
+  select(Name,Address,display_name)%>%
+  rename(Zip=display_name)
+
+StoredGeo$Zip<-StoredGeo$Zip%>%
+  stringr::str_extract("\\b\\d{5}\\b")
+
+#fixing 8 stragglers that zip did not create
+StoredGeo$Zip[StoredGeo$Address == "9300 Deponie Road"] <- "27614"
+StoredGeo$Zip[StoredGeo$Address == "2100 Old North Carolina 98 HWY"] <- "27587"
+StoredGeo$Zip[StoredGeo$Address == "205 Blanchard Street"] <- "27603"
+StoredGeo$Zip[StoredGeo$Address == "2900 Horseshoe Farm Road"] <- "27587"
+StoredGeo$Zip[StoredGeo$Address == "1 Mimosa St"] <- "27604"
+StoredGeo$Zip[StoredGeo$Address == "1525 Lynn Road"] <- "27612"
+StoredGeo$Zip[StoredGeo$Address == "1400 Millbrook Road"] <- "27612"
+StoredGeo$Zip[StoredGeo$Address == "1256 McCauley St., Suite 126"] <- "27601"
+
+
+
+```
+
+
+
+
+Different Try
+```{r}
+html |> html_elements("a") |>  html_elements("span") |> html_text2()
+
+AddressHTML<- html |> html_elements("div.address")
+Address <- AddressHTML |> 
+  map_chr(~ {
+    children <- html_elements(.x, "div")
+    if (length(children) >= 2) {
+      html_text2(children[2]) 
+    } 
+    else {
+      html_text2(children[1]) 
+    }
+  })
+data.frame(Address)
+filter(Address, !Name %in% c("Instagram", "YouTube", "Twitter", "Facebook"))
+
+
+
+Raw<-data.frame(
+  Name = html |> html_elements("span") |> html_text2(),
+  Address= html |> html_elements("div.address > div:nth-child(2)") |> html_text2()    
+)
+
+df<-tibble(html |> html_elements("div.address > div:nth-child(2)") |> html_text2())
+
+
+AlmClean<-geocode()
+
+```
+
+
+
+
+
+
+
